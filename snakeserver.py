@@ -1,17 +1,47 @@
+
+# This stuff is specific to the game you want to use
+from operator import add
+def goup(state,playernumber):
+    state[playernumber-1][1] += 1
+    return state
+
+def godown(state,playernumber):
+    state[playernumber-1][1] -= 1
+    return state
+
+def goleft(state,playernumber):
+    state[playernumber-1][0] -= 1
+    return state
+
+def goright(state,playernumber):
+    state[playernumber-1][0] += 1
+    return state
+
+MAXPLAYERS = 2
+inputs = {
+    0:goup,
+    1:godown,
+    2:goleft,
+    3:goright,
+}
+gamestate = [[0,0],[10,10]]
+def updategame(data, playernumber):
+    global gamestate
+    try:
+        clientcommand = int(data)
+        if clientcommand in range(0,4):
+            gamestate = inputs[clientcommand](gamestate,playernumber)
+    except:
+        pass
+
+
+
+
+# This stuff is generic for any turn based game
 from socket import *
 import threading
 import time
 
-
-# This stuff is specific to the game you want to use
-MAXPLAYERS = 2
-gamestate = []
-def updategame(data, playernumber):
-    global gamestate
-    gamestate = gamestate + 1
-
-
-# This stuff is generic for any turn based game
 BUFF = 1024
 HOST = '127.0.0.1'
 PORT = 8000 
@@ -58,13 +88,17 @@ def playerhandler(clientsock,addr,playernumber):
                 # Update the global game state according to the command
                 updategame(data,playernumber)
 
+                # Send the updated global state
+                clientsock.send(str(gamestate))
+                print repr(addr) + ' sent:' + repr(gamestate)
+
                 # Signal the end of this go
                 turncomplete = True
 
                 # Let everyone else have access again
                 lock.release()
 
-
+    lock.release()
     clientsock.close()
     print addr, "- closed connection" #log on console
 
@@ -125,7 +159,6 @@ if __name__=='__main__':
     PLAYING = True
     while ALIVE:
         active_players = threading.active_count() - 1 # minus one as the main thread counts
-        print active_players
         if active_players < MAXPLAYERS:
             ALIVE = False
             PLAYING = False
