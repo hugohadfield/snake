@@ -2,23 +2,25 @@ from socket import *
 import threading
 import time
 
-nplayers = 0
-MAXPLAYERS = 4
-turn = 0
-lock = threading.Lock()
 
-gamestate = 1000
+# This stuff is specific to the game you want to use
+MAXPLAYERS = 2
+gamestate = []
+def updategame(data, playernumber):
+    global gamestate
+    gamestate = gamestate + 1
 
+
+# This stuff is generic for any turn based game
 BUFF = 1024
 HOST = '127.0.0.1'
 PORT = 8000 
 ALIVE = True
 PLAYING = False
 turncomplete = False
-
-def updategame(data):
-    global gamestate
-    gamestate = gamestate + 1
+nplayers = 0
+turn = 0
+lock = threading.Lock()
 
 def connectionhandler(clientsock,addr,currentportnumber):
     print "sending new port to client"
@@ -32,6 +34,8 @@ def connectionhandler(clientsock,addr,currentportnumber):
 
 
 def playerhandler(clientsock,addr,playernumber):
+
+    # TODO implement a timeout on the turn to prevent overly time consuming strategies
 
     global turncomplete
 
@@ -52,7 +56,7 @@ def playerhandler(clientsock,addr,playernumber):
                 print repr(addr) + ' recv:' + repr(data)
 
                 # Update the global game state according to the command
-                updategame(data)
+                updategame(data,playernumber)
 
                 # Signal the end of this go
                 turncomplete = True
@@ -66,6 +70,8 @@ def playerhandler(clientsock,addr,playernumber):
 
 
 if __name__=='__main__':
+
+    # Set up the main socket for initial connection
     connectionADDR = (HOST, PORT)
     serversock = socket(AF_INET, SOCK_STREAM)
     serversock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -107,6 +113,7 @@ if __name__=='__main__':
         playerthreads.append(threading.Thread(target = playerhandler, args = (clientsock, addr,nplayers)))
         playerthreads[nplayers-1].start()
 
+
     # By this point all the players should have connected and been assigned 
     # their own port and a seperate thread should be serving them all
     # ensure all the connection threads are destroyed
@@ -132,7 +139,7 @@ if __name__=='__main__':
             time.sleep(0.1)
 
         # Wait for some time step
-        time.sleep(0.1)
+        time.sleep(0.5)
 
 
     # All of the threads should see the ALIVE flag shift when a player exits and so should exit
