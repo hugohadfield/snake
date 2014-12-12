@@ -23,13 +23,26 @@ endmessage = ""
 # This stuff is specific to the game you want to use
 from operator import add
 from collections import deque
+import random
 
 MAXPLAYERS = 2
 
-snake1 = deque([[0,0] , [0,1] , [0,2] , [0,3]])
-snake2 = deque([[10,10] , [10,11] , [10,12] , [10,13]])
+minx = 0
+maxx = 25
+miny = 0
+maxy = 25
 
-gamestate = [ snake1 , snake2 ]
+# seed the random number generator
+random.seed()
+
+snake1 = deque([[5,3] , [5,2] , [5,1] , [5,0]])
+snake2 = deque([[20,22] , [20,23] , [20,24] , [20,25]])
+apple = [12,12]
+score1 = 0
+score2 = 0
+turnlimit = 1001
+
+gamestate = [ snake1 , snake2 , apple , score1, score2]
 
 def checkcollision(headposition,occupied_squares):
     count = 0
@@ -44,15 +57,14 @@ def updategame(data, playernumber):
     global gamestate
     global gameover
     try:
-        # ensure it is a valid input
+        # Ensure it is a valid input
         clientcommand = int(data)
         if clientcommand in range(0,4):
 
-            # rotate the deque, moves the body of the snake
-            headposition = list(gamestate[playernumber-1][0]) # have to convert it from the deque to list or it passes by reference
-            gamestate[playernumber-1].rotate(1) 
+            # Get current head state
+            headposition = list(gamestate[playernumber-1][0]) 
 
-             #Calculates where the head should go, according to this command
+            # Calculates where the head should go, according to this command
             if clientcommand == 0:
                 headposition[1] = headposition[1] + 1 # go up
             elif clientcommand == 1:
@@ -62,14 +74,23 @@ def updategame(data, playernumber):
             elif clientcommand == 3:
                 headposition[0] = headposition[0] + 1 # go right
 
-            # update the deque with the head position
-            gamestate[playernumber-1].popleft()
+            # Check to see if the apple is eaten
+            if headposition == gamestate[2]:
+                gamestate[2+playernumber] += 10
+                gamestate[2][0] = random.randint(minx,maxx)
+                gamestate[2][1] = random.randint(miny,maxy)
+            else:
+                # Rotate the deque, moves the body of the snake
+                gamestate[playernumber-1].rotate(1) 
+                gamestate[playernumber-1].popleft()
+
+            # Update the deque with the head position
             gamestate[playernumber-1].appendleft(headposition)
 
-            # check if there is a snake collision
+            # Check if there is a snake collision
             occupied_squares = list(gamestate[0]) + list(gamestate[1])
             occupied_squares == headposition
-            
+
             if checkcollision(headposition,occupied_squares):
                 if playernumber == 1:
                     endmessage = "player 2 wins"
@@ -144,6 +165,7 @@ def playerhandler(clientsock,addr,playernumber):
 
 if __name__=='__main__':
 
+
     # Set up the main socket for initial connection
     connectionADDR = (HOST, PORT)
     serversock = socket(AF_INET, SOCK_STREAM)
@@ -195,6 +217,7 @@ if __name__=='__main__':
 
     # Here is the main game loop, this will run as long as the game is still 
     # running and everyone is still connected
+    turncounter = 0
     PLAYING = True
     while ALIVE:
         active_players = threading.active_count() - 1 # minus one as the main thread counts
@@ -203,11 +226,17 @@ if __name__=='__main__':
             PLAYING = False
 
         # Cycle through players turns, starting with player 1
-        for turncounter in range(1,MAXPLAYERS+1):
-            turn = turncounter
+        for turniter in range(1,MAXPLAYERS+1):
+            turn = turniter
             lock.acquire()
             turncomplete = False
             lock.release()
+            turncounter += 1
+            if turncounter > turnlimit:
+                ALIVE = False
+                PLAYING = False
+                print gamestate
+                break
             time.sleep(0.1)
 
         # Wait for some time step

@@ -27,7 +27,7 @@ s.connect((TCP_IP, PLAYER_PORT))
 
 # The game loop
 while 1:
-  
+
   # Get the global state
   data = s.recv(BUFFER_SIZE)
 
@@ -38,13 +38,8 @@ while 1:
   print gamestate
 
   # Plot the two snakes
-  #plt.plot(x, y)
-  #plt.axis([0, 6, 0, 20])
-  #plt.show()
-
-
-
-
+  snake1 =  gamestate[0]
+  snake2 =  gamestate[1]
 
   # Process it to create a next move
   # In this case manual control
@@ -61,9 +56,6 @@ while 1:
     s.send(str(2))
   elif move == 'd':
     s.send(str(3))
-
-
-
 
 
   # Get the updated global state
