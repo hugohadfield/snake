@@ -1,13 +1,11 @@
 
 
 
-
-
-
 # This stuff is generic for any turn based game
 from socket import *
 import threading
 import time
+import cPickle as pickle
 
 BUFF = 1024
 HOST = '127.0.0.1'
@@ -118,7 +116,7 @@ def playerhandler(clientsock,addr,playernumber):
                     break
 
                 # Send the latest global state
-                clientsock.send(str(gamestate))
+                clientsock.send(pickle.dumps(gamestate))
                 #print repr(addr) + ' sent:' + repr(gamestate)
 
                 # Get back a command from the client
@@ -130,7 +128,7 @@ def playerhandler(clientsock,addr,playernumber):
                 updategame(data,playernumber)
 
                 # Send the updated global state
-                clientsock.send(str(gamestate))
+                clientsock.send(pickle.dumps(gamestate))
                 #print repr(addr) + ' sent:' + repr(gamestate)
 
                 # Signal the end of this go
@@ -222,12 +220,3 @@ if __name__=='__main__':
         t.join()
 
         
-
-
-
-
-
-
-
-
-

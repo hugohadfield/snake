@@ -2,6 +2,12 @@ import socket
 import time
 import msvcrt
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+import cPickle as pickle
+
+
 # Initial socket settings
 TCP_IP = '127.0.0.1'
 TCP_PORT = 8000
@@ -21,18 +27,31 @@ s.connect((TCP_IP, PLAYER_PORT))
 
 # The game loop
 while 1:
+  
   # Get the global state
   data = s.recv(BUFFER_SIZE)
 
+  # Unpickle it
+  gamestate = pickle.loads(data)
+
   # Print what we recieve
-  print data
+  print gamestate
+
+  # Plot the two snakes
+  #plt.plot(x, y)
+  #plt.axis([0, 6, 0, 20])
+  #plt.show()
+
+
+
+
+
+  # Process it to create a next move
+  # In this case manual control
 
   # Try to flush the buffer
   while msvcrt.kbhit():
     msvcrt.getch()
-
-  # Process it to create a next move
-  # In this case manual control
   move = msvcrt.getch()
   if move == 'w':
     s.send(str(0))
@@ -43,10 +62,18 @@ while 1:
   elif move == 'd':
     s.send(str(3))
 
+
+
+
+
   # Get the updated global state
   data = s.recv(BUFFER_SIZE)
+
+  # Unpickle it
+  gamestate = pickle.loads(data)
+
   # Print what we recieve
-  print data
+  print gamestate
 
 # Close the socket
 s.close()
