@@ -18,11 +18,12 @@ playernumber = PLAYER_PORT - TCP_PORT
 s.connect((TCP_IP, PLAYER_PORT))
 s.send(str(playernumber))
 
-for it in range(0,200):
-  time.sleep(1)
-  s.send(str(it))
+while 1:
+  # Get the global state
   data = s.recv(BUFFER_SIZE)
-  print data
+
+  # Process it to create a next move
+  s.send(str(playernumber))
 
 
 s.close()

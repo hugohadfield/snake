@@ -1,20 +1,24 @@
 from socket import *
 import threading
 import time
-import signal
 
 nplayers = 0
-MAXPLAYERS = 2
+MAXPLAYERS = 4
+turn = 0
+lock = threading.Lock()
 
-lock = Lock()
+gamestate = 1000
 
 BUFF = 1024
-HOST = '127.0.0.1'# must be input parameter @TODO
-PORT = 8000 # must be input parameter @TODO
+HOST = '127.0.0.1'
+PORT = 8000 
 ALIVE = True
+PLAYING = False
+turncomplete = False
 
-def response(key):
-    return 'Server response: ' + key
+def updategame(data):
+    global gamestate
+    gamestate = gamestate + 1
 
 def connectionhandler(clientsock,addr,currentportnumber):
     print "sending new port to client"
@@ -27,15 +31,36 @@ def connectionhandler(clientsock,addr,currentportnumber):
     print addr, "- closed connection" #log on console
 
 
-def playerhandler(clientsock,addr):
+def playerhandler(clientsock,addr,playernumber):
+
+    global turncomplete
+
     while ALIVE:
-        # Send the latest global state
-        data = clientsock.recv(BUFF)
-        if not data: break
-        print repr(addr) + ' recv:' + repr(data)
-        clientsock.send(response(data))
-        print repr(addr) + ' sent:' + repr(response(data))
-        if "close" == data.rstrip(): break # type 'close' on client console to close connection from the server side
+        while PLAYING:
+            # Wait for this players turn
+            if turn == playernumber and turncomplete == False:
+                # Ensure this is the only thread modifying the shared resources
+                lock.acquire()
+
+                # Send the latest global state
+                clientsock.send(str(gamestate))
+                print repr(addr) + ' sent:' + repr(gamestate)
+
+                # Get back a command from the client
+                data = clientsock.recv(BUFF)
+                if not data: break
+                print repr(addr) + ' recv:' + repr(data)
+
+                # Update the global game state according to the command
+                updategame(data)
+
+                # Signal the end of this go
+                turncomplete = True
+
+                # Let everyone else have access again
+                lock.release()
+
+
     clientsock.close()
     print addr, "- closed connection" #log on console
 
@@ -49,6 +74,7 @@ if __name__=='__main__':
     connectionthreads = []
     playerthreads = []
     playerADDR = []
+    global turncomplete
 
     # This section accepts connections from a few players and reassigns them ports
     while 1:
@@ -78,7 +104,7 @@ if __name__=='__main__':
         clientsock, addr = serversock.accept()
         print '...connected from:', addr
         # spawn a new thread to deal with each player
-        playerthreads.append(threading.Thread(target = playerhandler, args = (clientsock, addr)))
+        playerthreads.append(threading.Thread(target = playerhandler, args = (clientsock, addr,nplayers)))
         playerthreads[nplayers-1].start()
 
     # By this point all the players should have connected and been assigned 
@@ -89,14 +115,24 @@ if __name__=='__main__':
 
     # Here is the main game loop, this will run as long as the game is still 
     # running and everyone is still connected
+    PLAYING = True
     while ALIVE:
         active_players = threading.active_count() - 1 # minus one as the main thread counts
         print active_players
         if active_players < MAXPLAYERS:
             ALIVE = False
+            PLAYING = False
 
-        # This is where the game should be called to update state
-        time.sleep(1)
+        # Cycle through players turns, starting with player 1
+        for turncounter in range(1,MAXPLAYERS+1):
+            turn = turncounter
+            lock.acquire()
+            turncomplete = False
+            lock.release()
+            time.sleep(0.1)
+
+        # Wait for some time step
+        time.sleep(0.1)
 
 
     # All of the threads should see the ALIVE flag shift when a player exits and so should exit
