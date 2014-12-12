@@ -19,7 +19,7 @@ nplayers = 0
 turn = 0
 lock = threading.Lock()
 gameover = False
-
+endmessage = ""
 
 
 # This stuff is specific to the game you want to use
@@ -34,9 +34,12 @@ snake2 = deque([[10,10] , [10,11] , [10,12] , [10,13]])
 gamestate = [ snake1 , snake2 ]
 
 def checkcollision(headposition,occupied_squares):
+    count = 0
     for [x,y] in occupied_squares:
         if headposition == [x,y]:
-            return 1
+            count = count + 1
+            if count>= 2:
+                return 1
     return 0
 
 def updategame(data, playernumber):
@@ -66,14 +69,15 @@ def updategame(data, playernumber):
             gamestate[playernumber-1].appendleft(headposition)
 
             # check if there is a snake collision
-            occupied_squares = list(gamestate[playernumber-1]) + list(gamestate[playernumber])
+            occupied_squares = list(gamestate[0]) + list(gamestate[1])
             occupied_squares == headposition
             
             if checkcollision(headposition,occupied_squares):
                 if playernumber == 1:
-                    print "player 2 wins"
+                    endmessage = "player 2 wins"
                 else:
-                    print "player 1 wins"
+                    endmessage = "player 1 wins"
+                print endmessage
                 gameover = True
 
     except:
@@ -103,11 +107,15 @@ def playerhandler(clientsock,addr,playernumber):
     global gameover
 
     while ALIVE:
-        while PLAYING:
+        if PLAYING:
             # Wait for this players turn
-            if turn == playernumber and turncomplete == False and gameover == False:
+            if turn == playernumber and turncomplete == False:
                 # Ensure this is the only thread modifying the shared resources
                 lock.acquire()
+
+                if gameover:
+                    clientsock.send(endmessage)
+                    break
 
                 # Send the latest global state
                 clientsock.send(str(gamestate))
