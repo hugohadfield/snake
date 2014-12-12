@@ -1,38 +1,5 @@
 
-# This stuff is specific to the game you want to use
-from operator import add
-def goup(state,playernumber):
-    state[playernumber-1][1] += 1
-    return state
 
-def godown(state,playernumber):
-    state[playernumber-1][1] -= 1
-    return state
-
-def goleft(state,playernumber):
-    state[playernumber-1][0] -= 1
-    return state
-
-def goright(state,playernumber):
-    state[playernumber-1][0] += 1
-    return state
-
-MAXPLAYERS = 2
-inputs = {
-    0:goup,
-    1:godown,
-    2:goleft,
-    3:goright,
-}
-gamestate = [[0,0],[10,10]]
-def updategame(data, playernumber):
-    global gamestate
-    try:
-        clientcommand = int(data)
-        if clientcommand in range(0,4):
-            gamestate = inputs[clientcommand](gamestate,playernumber)
-    except:
-        pass
 
 
 
@@ -51,6 +18,71 @@ turncomplete = False
 nplayers = 0
 turn = 0
 lock = threading.Lock()
+gameover = False
+
+
+
+# This stuff is specific to the game you want to use
+from operator import add
+from collections import deque
+
+MAXPLAYERS = 2
+
+snake1 = deque([[0,0] , [0,1] , [0,2] , [0,3]])
+snake2 = deque([[10,10] , [10,11] , [10,12] , [10,13]])
+
+gamestate = [ snake1 , snake2 ]
+
+def checkcollision(headposition,occupied_squares):
+    for [x,y] in occupied_squares:
+        if headposition == [x,y]:
+            return 1
+    return 0
+
+def updategame(data, playernumber):
+    global gamestate
+    global gameover
+    try:
+        # ensure it is a valid input
+        clientcommand = int(data)
+        if clientcommand in range(0,4):
+
+            # rotate the deque, moves the body of the snake
+            headposition = list(gamestate[playernumber-1][0]) # have to convert it from the deque to list or it passes by reference
+            gamestate[playernumber-1].rotate(1) 
+
+             #Calculates where the head should go, according to this command
+            if clientcommand == 0:
+                headposition[1] = headposition[1] + 1 # go up
+            elif clientcommand == 1:
+                headposition[1] = headposition[1] - 1 # go down
+            elif clientcommand == 2:
+                headposition[0] = headposition[0] - 1 # go left
+            elif clientcommand == 3:
+                headposition[0] = headposition[0] + 1 # go right
+
+            # update the deque with the head position
+            gamestate[playernumber-1].popleft()
+            gamestate[playernumber-1].appendleft(headposition)
+
+            # check if there is a snake collision
+            occupied_squares = list(gamestate[playernumber-1]) + list(gamestate[playernumber])
+            occupied_squares == headposition
+            
+            if checkcollision(headposition,occupied_squares):
+                if playernumber == 1:
+                    print "player 2 wins"
+                else:
+                    print "player 1 wins"
+                gameover = True
+
+    except:
+        pass
+
+
+
+
+# This stuff is generic for any turn based game
 
 def connectionhandler(clientsock,addr,currentportnumber):
     print "sending new port to client"
@@ -68,29 +100,30 @@ def playerhandler(clientsock,addr,playernumber):
     # TODO implement a timeout on the turn to prevent overly time consuming strategies
 
     global turncomplete
+    global gameover
 
     while ALIVE:
         while PLAYING:
             # Wait for this players turn
-            if turn == playernumber and turncomplete == False:
+            if turn == playernumber and turncomplete == False and gameover == False:
                 # Ensure this is the only thread modifying the shared resources
                 lock.acquire()
 
                 # Send the latest global state
                 clientsock.send(str(gamestate))
-                print repr(addr) + ' sent:' + repr(gamestate)
+                #print repr(addr) + ' sent:' + repr(gamestate)
 
                 # Get back a command from the client
                 data = clientsock.recv(BUFF)
                 if not data: break
-                print repr(addr) + ' recv:' + repr(data)
+                #print repr(addr) + ' recv:' + repr(data)
 
                 # Update the global game state according to the command
                 updategame(data,playernumber)
 
                 # Send the updated global state
                 clientsock.send(str(gamestate))
-                print repr(addr) + ' sent:' + repr(gamestate)
+                #print repr(addr) + ' sent:' + repr(gamestate)
 
                 # Signal the end of this go
                 turncomplete = True

@@ -1,6 +1,6 @@
 import socket
 import time
-from msvcrt import getch
+import msvcrt
 
 # Initial socket settings
 TCP_IP = '127.0.0.1'
@@ -27,9 +27,13 @@ while 1:
   # Print what we recieve
   print data
 
+  # Try to flush the buffer
+  while msvcrt.kbhit():
+    msvcrt.getch()
+
   # Process it to create a next move
   # In this case manual control
-  move = getch()
+  move = msvcrt.getch()
   if move == 'w':
     s.send(str(0))
   elif move == 's':
