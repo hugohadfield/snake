@@ -53,6 +53,11 @@ def checkcollision(headposition,occupied_squares):
                 return 1
     return 0
 
+def checkoutofbounds(headposition):
+    if headposition[0] < minx or headposition[0] > maxx or headposition[1] < miny or headposition[1] > maxy:
+        return 1
+    return 0
+
 def updategame(data, playernumber):
     global gamestate
     global gameover
@@ -91,13 +96,18 @@ def updategame(data, playernumber):
             occupied_squares = list(gamestate[0]) + list(gamestate[1])
             occupied_squares == headposition
 
-            if checkcollision(headposition,occupied_squares):
+            if checkcollision(headposition,occupied_squares) or checkoutofbounds(headposition):
                 if playernumber == 1:
                     endmessage = "player 2 wins"
                 else:
                     endmessage = "player 1 wins"
                 print endmessage
                 gameover = True
+
+            # Ensure that if the apple has moved, that it is not within a snake
+            while checkcollision(gamestate[2],occupied_squares):
+                gamestate[2][0] = random.randint(minx,maxx)
+                gamestate[2][1] = random.randint(miny,maxy)
 
     except:
         pass

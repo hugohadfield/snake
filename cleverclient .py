@@ -40,23 +40,10 @@ while 1:
   # Plot the two snakes
   snake1 =  gamestate[0]
   snake2 =  gamestate[1]
+  apple =  gamestate[2]
 
   # Process it to create a next move
-  # In this case manual control
-
-  # Try to flush the buffer
-  while msvcrt.kbhit():
-    msvcrt.getch()
-  move = msvcrt.getch()
-  if move == 'w':
-    s.send(str(0))
-  elif move == 's':
-    s.send(str(1))
-  elif move == 'a':
-    s.send(str(2))
-  elif move == 'd':
-    s.send(str(3))
-
+  s.send(str(0))
 
   # Get the updated global state
   data = s.recv(BUFFER_SIZE)
